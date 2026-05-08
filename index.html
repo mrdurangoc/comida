@@ -408,9 +408,10 @@ function showSync(type, msg) {
   const b = document.getElementById('syncBanner');
   const m = document.getElementById('syncMsg');
   if (!b) return;
+  b.style.display = type ? 'flex' : 'none';
   b.className = 'sync-banner ' + type;
   m.textContent = msg;
-  if (type === 'saved') setTimeout(() => { b.className = 'sync-banner'; }, 3000);
+  if (type === 'saved') setTimeout(() => { b.style.display='none'; b.className = 'sync-banner'; }, 3000);
 }
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfTo_sfND3O3B3dnh0k7pPYEsWFn7RuVeMP16bshqf7-e9CeF5YhpY9dj3wWOm2SXyfQ/exec';
@@ -444,6 +445,7 @@ async function saveToSheets(dateStr) {
 }
 
 async function syncFromSheets() {
+  showToast('☁️ Sincronizando...');
   showSync('saving', 'Cargando desde Google Sheets...');
   try {
     const response = await fetch(SCRIPT_URL + '?type=food', { method: 'GET' });

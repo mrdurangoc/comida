@@ -416,6 +416,12 @@ function showSync(type, msg) {
 }
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfTo_sfND3O3B3dnh0k7pPYEsWFn7RuVeMP16bshqf7-e9CeF5YhpY9dj3wWOm2SXyfQ/exec';
+let saveTimer = null;
+
+function debouncedSave(dateStr) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveToSheets(dateStr), 2000);
+}
 
 async function saveToSheets(dateStr) {
   const d = getDay(dateStr);
@@ -537,8 +543,8 @@ function setGlass(n) {
   const d = getDay(today());
   d.glasses = d.glasses===n ? n-1 : n;
   save(); renderWater(d); updateScore(d);
-  if(d.glasses===8) { showToast('💧 AGUA COMPLETA ✓'); saveToSheets(today()); }
-  else saveToSheets(today());
+  if(d.glasses===8) { showToast('💧 AGUA COMPLETA ✓'); debouncedSave(today()); }
+  else debouncedSave(today());
 }
 
 function renderVices(d) {
@@ -579,7 +585,7 @@ function toggleVice(vice) {
   const d = getDay(today());
   d[vice] = !d[vice];
   save(); renderVices(d); updateScore(d);
-  saveToSheets(today());
+  debouncedSave(today());
   if (!d[vice]) {
     showToast(vice==='diet' ? '🏆 SIN DIET COKE HOY' : '🏆 SIN COMIDA EN CALLE');
   }
@@ -656,6 +662,7 @@ function logMeal(id, e) {
   if(idx>=0) d.logged.splice(idx,1);
   else d.logged.push(id);
   save(); renderMeals(d); renderTotals(d); updateScore(d);
+  debouncedSave(today());
   const m = MEALS.find(x=>x.id===id);
   if(idx<0) showToast(`${m.icon} ${m.name.toUpperCase()} REGISTRADA`);
 }
@@ -719,12 +726,15 @@ function renderHistory() {
   let html='';
   dates.forEach(ds=>{
     const d=state.days[ds];
-    const tot=calcTotals(d);
+    // Use stored macros from Sheets if available, otherwise recalculate
+    const tot = (d.totalP || d.totalC || d.totalK)
+      ? {p:d.totalP||0, c:d.totalC||0, f:d.totalF||0, k:d.totalK||0}
+      : calcTotals(d);
     const pMeals=MEALS.filter(m=>(d.logged||[]).includes(m.id)&&m.macros.p>=15).length;
     const waterOk=(d.glasses||0)>=8;
     const date=new Date(ds+'T12:00:00');
     const badges=[
-      pMeals>=3?'💪':'',
+      (pMeals>=3||tot.p>=100)?'💪':'',
       waterOk?'💧':'',
       !d.diet?'🥤':'',
       !d.street?'🏠':'',
